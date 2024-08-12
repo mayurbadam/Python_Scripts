@@ -1,0 +1,20 @@
+import os
+file_to_be_renamed_list = open(r"/home/mayurkrishna.b/svn/mayurkrishna/Assignments/Python/pa_8/file_to_be_renamed_list.txt","r+")
+renamed_file_list = open(r"/home/mayurkrishna.b/svn/mayurkrishna/Assignments/Python/pa_8/renamed_file_list.txt","r+")
+#print(type(to_be_renamed_list)) 
+#print(to_be_renamed_list) 
+
+#A = ["mika.csv \n", "xyz.txt \n", "qwerty.xlsx \n", "utiamc.sv \n"]
+#B = ["milkha.csv \n", "abc.txt \n", "asdfg.xlsx \n", "namamc.sv \n"]
+
+#file_to_be_renamed_list.writelines(A)
+#print(file_to_be_renamed_list)
+
+
+#print(type(to_be_renamed_list[1])) 
+print(to_be_renamed_list)
+for x in range(1,4):
+   to_be_renamed_list = file_to_be_renamed_list.readline()
+   rename_file_list = renamed_file_list.readline()
+
+   os.rename(to_be_renamed_list, rename_file_list)
