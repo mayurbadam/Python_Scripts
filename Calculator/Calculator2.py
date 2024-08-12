@@ -1,10 +1,9 @@
 from tkinter import *
 
-# globally declare the expression variable
+# globally declaring the expression variable
 expression = "0b"
- 
- 
-# Function to update expression in the text entry box
+  
+# Function to update numbers expression in the text entry box
 def press(num):
     # point out the global expression variable
     global expression
@@ -15,6 +14,8 @@ def press(num):
     # update the expression by using set method
     equation.set(expression)
 
+
+# Function to update characters expression in the text entry box
 def cpress(char):
     # point out the global expression variable
     global expression
@@ -33,47 +34,58 @@ def radpress(rad):
         global expression
         if(rad == "Dec"):
            total = int(expression,2)
-           equation.set(total)
         elif(rad == "Hex"):
            total = int(expression,2)
            total = hex(total)
-           equation.set(total)
         elif(rad == "Oct"):
            total = int(expression,2)
            total = format(total,'o')
-           equation.set(total)
-        elif(rad == "Bin"):
-           #print(expression)
-           #total = int(expression,0)
-           #print(expression)
-           #total = int(total,2)
-           total = expression
-           equation.set(total)
-        #expression = ""
+        
+        equation.set(total)
 
-    # if error is generated then handle by the except block
+        expression = ""
+
+    # if error is generate then handle
+    # by the except block
+
     except:
+
         equation.set(" error ")
         expression = ""
 
-# Function to evaluate the expression if = is pressed
+# Function to evaluate the final expression
 def equalpress():
-    # Try and except statement is used for handling the errors like zero division error etc.
+    # Try and except statement is used
+    # for handling the errors like zero
+    # division error etc.
+ 
+    # Put that code inside the try block
+    # which may generate the error
     try:
+ 
         global expression
-        # eval function - to evaluate the expression and str function convert the result into string
-        expression = str(bin(round(eval(expression),3)))
-        equation.set(expression)
  
+        # eval function evaluate the expression
+        # and str function convert the result
+        # into string
+        total = str(bin(round(eval(expression),3)))
  
-    # if error is generated then handle by the except block
+        equation.set(total)
+ 
+        # initialize the expression variable
+        # by empty string
+        expression = ""
+ 
+    # if error is generate then handle
+    # by the except block
     except:
+ 
         equation.set(" error ")
-        # initialize the expression variable by empty string expression = ""
         expression = ""
  
  
-# Function to clear the contents of text entry box
+# Function to clear the contents
+# of text entry box
 def clear():
     global expression
     expression = "0b"
@@ -82,28 +94,29 @@ def clear():
  
 # Driver code
 if __name__ == "__main__":
-    # create a GUI window
+    #GUI window using tkinter
     gui = Tk()
  
     # setting the background colour of GUI window
     gui.configure(background="grey")
+ 
     # setting the title of GUI window
     gui.title("Simple Calculator")
-    # setting the configuration of GUI window
-    gui.geometry("230x160")
  
-    # StringVar() is the variable class
-    # creating an instance of this class
+    # setting the configuration of GUI window
+    gui.geometry("330x170")
+ 
+    # Instance of StringVar(). It is the variable class.
     equation = StringVar()
  
     # creating the text entry box for showing the expression .
     expression_field = Entry(gui, textvariable=equation)
  
     # grid method is used for placing the widgets at respective positions in table like structure .
-    expression_field.grid(columnspan=3, ipadx=30)
+    expression_field.grid(columnspan=4, ipadx=70)
  
-    # creating a Buttons and place at a particular location inside the root window .
-    # when user press the button, the command or function affiliated to that button is executed .
+    # creating Buttons and place at a particular location inside the root window. 
+    # when user presses the button, the command or function affiliated to that button is executed .
     button0 = Button(gui, text=' 0 ', fg='black', bg='white',
                     command=lambda: press(0), height=1, width=6)
     button0.grid(row=1, column=0)
@@ -139,28 +152,22 @@ if __name__ == "__main__":
     multiply = Button(gui, text=' * ', fg='black', bg='white',
                     command=lambda: cpress("*"), height=1, width=6)
     multiply.grid(row=3, column=2)
-
+ 
     Decimal= Button(gui, text='Dec', fg='black', bg='white',
                     command=lambda: radpress('Dec'), height=1, width=6)
     Decimal.grid(row=6, column=0)
-
     Hexadecimal= Button(gui, text='Hex', fg='black', bg='white',
                     command=lambda: radpress('Hex'), height=1, width=6)
     Hexadecimal.grid(row=6, column=1)
-
     Octal= Button(gui, text='Oct', fg='black', bg='white',
                     command=lambda: radpress('Oct'), height=1, width=6)
     Octal.grid(row=6, column=2)
- 
-    Binary= Button(gui, text='Bin', fg='black', bg='white',
-                    command=lambda: radpress('Bin'), height=1, width=6)
-    Binary.grid(row=7, column=1)
-
+    
     # starting the GUI
     gui.mainloop()
 
 
-   #Buttons for 2,3,4,.....
+
     #button2 = Button(gui, text=' 2 ', fg='black', bg='white',
     #                command=lambda: press(2), height=1, width=6)
     #button2.grid(row=2, column=1)
