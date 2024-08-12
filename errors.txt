@@ -1,0 +1,9 @@
+Started to write this to free the mind after intense thinking and solving the problem. Have fun writing your experiences!! It might be hard sometimes. Dont try too hard. You are trying to relax. We can document afterwards also.
+
+#01/07/22:
+1 . error was due to string having extra line which is empty because i was appending with "\n" for every input whil taking input for multi line string. It was giving error repeatedly and i added displays and took a string with same data as the ones i am giving input. Both strings looked same but, i was not observing the empty line after the input string. Then i truncated the last line using: str1[:str1.rfind('\n')]. It removed the last \n and the problem was solved.
+
+2. openpyxl was not taking a string as the file name. We have to write hard coded. I was trying to input of file name from terminal and assigning that value to the string. But while loading file with:
+      openpyxl.load_workbook(r'string1') //string1="file.xlsx"
+It was giving error. So, I had to write:
+      openpyxl.load_workbook(r'file.xlsx')
