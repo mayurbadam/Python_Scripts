@@ -3,48 +3,60 @@ import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 from flask import Flask, render_template, request, redirect, url_for
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 
-# Get current month
-current_month = datetime.datetime.now().strftime("%m")
+# Excel file for local storage
+excel_file = "expenses.xlsx"
 
-# Load existing data from Excel if available
-excel_file = "excel_budget.xlsx"
 def load_data():
-    try:
-        return pd.read_excel(excel_file, sheet_name=current_month, engine="openpyxl")
-    except (FileNotFoundError, ValueError):
+    if os.path.exists(excel_file):
+        return pd.read_excel(excel_file, engine="openpyxl")
+    else:
         return pd.DataFrame(columns=["Date", "Name", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings"])
+
+def save_data(data):
+    with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+        data.to_excel(writer, index=False)
+
+def generate_chart(data):
+    if data.empty:
+        return None
+    categories = ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]
+    values = [data[col].astype(float).sum() for col in categories]
+    fig, ax = plt.subplots(figsize=(5, 3))
+    ax.pie(values, labels=categories, autopct="%1.1f%%", startangle=90, colors=["#ff9999", "#66b3ff", "#99ff99", "#ffcc99", "#c2c2f0", "#ffb3e6"])
+    ax.set_title("Expense Distribution")
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 @app.route('/')
 def index():
     data = load_data()
     summary = {col: data[col].astype(float).sum() for col in ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]} if not data.empty else {}
-    return render_template("index.html", data=data.to_dict(orient='records'), summary=summary)
+    chart = generate_chart(data)
+    return render_template("index.html", data=data.to_dict(orient='records'), summary=summary, chart=chart)
 
 @app.route('/add', methods=['POST'])
 def add_expense():
-    date = request.form.get("date") or datetime.datetime.now().strftime("%d-%b")
-    name = request.form.get("name") or " "
-    rent = request.form.get("rent") or "0"
-    need = request.form.get("need") or "0"
-    transit = request.form.get("transit") or "0"
-    luxury = request.form.get("luxury") or "0"
-    lent = request.form.get("lent") or "0"
-    savings = request.form.get("savings") or "0"
-
-    new_row = pd.DataFrame([{ "Date": date, "Name": name, "Rent": rent, "Need": need, "Transit": transit, "Luxury": luxury, "Lent": lent, "Savings": savings }])
-    existing_data = load_data()
-    updated_data = pd.concat([existing_data, new_row], ignore_index=True)
-    
-    with pd.ExcelWriter(excel_file, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-        updated_data.to_excel(writer, sheet_name=current_month, index=False)
-    
+    data = load_data()
+    new_row = pd.DataFrame([{ 
+        "Date": request.form.get("date") or datetime.datetime.now().strftime("%d-%b"),
+        "Name": request.form.get("name") or " ",
+        "Rent": request.form.get("rent") or "0",
+        "Need": request.form.get("need") or "0",
+        "Transit": request.form.get("transit") or "0",
+        "Luxury": request.form.get("luxury") or "0",
+        "Lent": request.form.get("lent") or "0",
+        "Savings": request.form.get("savings") or "0"
+    }])
+    data = pd.concat([data, new_row], ignore_index=True)
+    save_data(data)
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    if not os.path.exists(excel_file):
-        with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
-            pd.DataFrame(columns=["Date", "Name", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]).to_excel(writer, sheet_name=current_month, index=False)
     app.run(debug=True)
