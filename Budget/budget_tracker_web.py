@@ -2,138 +2,139 @@ import os
 import tkinter as tk
 from tkinter import ttk
 import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-############ Add for savings also
+# Get current month
+current_month = datetime.datetime.now().strftime("%m")
+
+# Load existing data from Excel if available
+excel_file = "excel_budget.xlsx"
+def load_data():
+    try:
+        return pd.read_excel(excel_file, sheet_name=current_month, engine="openpyxl")
+    except (FileNotFoundError, ValueError):
+        return pd.DataFrame(columns=["Date", "Name", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings"])
+existing_sheet = load_data()
 
 def add_expense():
-    name = name_entry.get()
-    date = datetime.datetime.now()
-    rent = rent_entry.get()
-    need = need_entry.get()
-    transit = transit_entry.get()
-    luxury = luxury_entry.get()
-    lent = lent_entry.get()
+    global existing_sheet
+    date = date_entry.get() or datetime.datetime.now().strftime("%d-%b")
+    name = name_entry.get() or " "
+    rent = rent_entry.get() or "0"
+    need = need_entry.get() or "0"
+    transit = transit_entry.get() or "0"
+    luxury = luxury_entry.get() or "0"
+    lent = lent_entry.get() or "0"
+    savings = savings_entry.get() or "0"
 
-    with open("expenses.txt", "a") as file:
-        file.write(f"{name},{date},{rent},{need},{transit},{luxury},{lent}\n")
+    new_row = pd.DataFrame([{ "Date": date, "Name": name, "Rent": rent, "Need": need, "Transit": transit, "Luxury": luxury, "Lent": lent, "Savings": savings }])
+    existing_sheet = pd.concat([load_data(), new_row], ignore_index=True)
+    
+    with pd.ExcelWriter(excel_file, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        existing_sheet.to_excel(writer, sheet_name=current_month, index=False)
+    
     status_label.config(text="Expense added successfully!", fg="green")
-    name_entry.delete(0, tk.END)
-    date_entry.delete(0, tk.END)
-    rent_entry.delete(0, tk.END)
-    need_entry.delete(0, tk.END)
-    transit_entry.delete(0, tk.END)
-    luxury_entry.delete(0, tk.END)
-    lent_entry.delete(0, tk.END)
+    clear_expenses()
     view_expenses()
 
-def delete_expense():
-    selected_item = expenses_tree.selection()
-    if selected_item:
-        item_text = expenses_tree.item(selected_item, "values")
-        name,date,rent,need,transit,luxury,lent = item_text
-        with open("expenses.txt", "r") as file:
-            lines = file.readlines()
-        with open("expenses.txt", "w") as file:
-            for line in lines:
-                if line.strip() != f"{name},{date},{rent},{need},{transit},{luxury},{lent}":
-                    file.write(line)
-        status_label.config(text="Expense deleted successfully!", fg="green")
-        view_expenses()
-    else:
-        status_label.config(text="Please select an expense to delete!", fg="red")
-
 def view_expenses():
-    global expenses_tree
-    if os.path.exists("expenses.txt"):
-        total_expense = 0
-        expenses_tree.delete(*expenses_tree.get_children())
-        with open("expenses.txt", "r") as file:
-            for line in file:
-                name,date,rent,need,transit,luxury,lent = line.strip().split(",")
-                expenses_tree.insert("", tk.END, values=(name,date,rent,need,transit,luxury,lent))
-                total_expense = total_expense+float(rent+need+transit+luxury)
-        total_label.config(text=f"Total Expense: {total_expense:.2f}")
-    else:
-        total_label.config(text="No expenses recorded.")
-        expenses_tree.delete(*expenses_tree.get_children())
+    expenses_tree.delete(*expenses_tree.get_children())
+    for _, row in load_data().iterrows():
+        expenses_tree.insert("", tk.END, values=row.tolist())
+    show_summary()
+    plot_expenses()
 
-# Create the main application window
+def clear_expenses():
+    date_entry.delete(0, tk.END)
+    name_entry.delete(0, tk.END)
+    for entry in entries.values():
+        entry.delete(0, tk.END)
+        entry.insert(0, "0")
+
+def show_summary():
+    data = load_data()
+    summary_text = "Summary:\n"
+    if not data.empty:
+        for col in ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]:
+            summary_text += f"{col}: {data[col].astype(float).sum():.2f}\n"
+    summary_label.config(text=summary_text)
+
+def plot_expenses():
+    data = load_data()
+    if data.empty:
+        return
+    fig, ax = plt.subplots(figsize=(4, 3))
+    categories = ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]
+    values = [data[col].astype(float).sum() for col in categories]
+    ax.pie(values, labels=categories, autopct="%1.1f%%", startangle=90, colors=["#ff9999", "#66b3ff", "#99ff99", "#ffcc99", "#c2c2f0", "#ffb3e6"])
+    ax.set_title("Expense Distribution")
+    
+    for widget in chart_frame.winfo_children():
+        widget.destroy()
+    
+    canvas = FigureCanvasTkAgg(fig, master=chart_frame)
+    canvas.get_tk_widget().pack()
+    canvas.draw()
+
 root = tk.Tk()
 root.title("Expense Tracker")
+root.geometry("500x400")
 
-# Create labels and entries for adding expenses
-name_label = tk.Label(root, text="Expense Name:")
-name_label.grid(row=0, column=0, padx=5, pady=5)
-name_entry = tk.Entry(root)
-name_entry.grid(row=0, column=1, padx=5, pady=5)
+frame_top = tk.Frame(root)
+frame_top.pack(fill="x", padx=5, pady=5)
 
-date_label = tk.Label(root, text="Date (YYYY-MM-DD):")
-date_label.grid(row=1, column=0, padx=5, pady=5)
-date_entry = tk.Entry(root)
-#date_entry = datetime.datetime.now()
-date_entry.grid(row=1, column=1, padx=5, pady=5)
+frame_bottom = tk.Frame(root)
+frame_bottom.pack(fill="both", expand=True, padx=5, pady=5)
 
-rent_label = tk.Label(root, text="Rent:")
-rent_label.grid(row=2, column=0, padx=5, pady=5)
-rent_entry = tk.Entry(root)
-rent_entry.grid(row=2, column=1, padx=5, pady=5)
+frame_left = tk.Frame(frame_bottom)
+frame_left.pack(side="left", padx=5, pady=5)
 
-need_label = tk.Label(root, text="Need:")
-need_label.grid(row=3, column=0, padx=5, pady=5)
-need_entry = tk.Entry(root)
-need_entry.grid(row=3, column=1, padx=5, pady=5)
+tk.Label(frame_top, text="Date (DD-MMM):").pack(side="left")
+date_entry = tk.Entry(frame_top, width=10)
+date_entry.pack(side="left", padx=5)
+tk.Label(frame_top, text="Expense Name:").pack(side="left")
+name_entry = tk.Entry(frame_top, width=15)
+name_entry.pack(side="left", padx=5)
 
-transit_label = tk.Label(root, text="Transit:")
-transit_label.grid(row=4, column=0, padx=5, pady=5)
-transit_entry = tk.Entry(root)
-transit_entry.grid(row=4, column=1, padx=5, pady=5)
+tk.Label(frame_left, text="Categories:").pack()
+categories = ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]
+entries = {}
+for category in categories:
+    frame = tk.Frame(frame_left)
+    frame.pack(fill="x")
+    tk.Label(frame, text=f"{category}:", width=8, anchor="w").pack(side="left")
+    entry = tk.Entry(frame, width=8)
+    entry.insert(0, "0")
+    entry.pack(side="left")
+    entries[category.lower()] = entry
 
-luxury_label = tk.Label(root, text="Luxury:")
-luxury_label.grid(row=5, column=0, padx=5, pady=5)
-luxury_entry = tk.Entry(root)
-luxury_entry.grid(row=5, column=1, padx=5, pady=5)
+rent_entry, need_entry, transit_entry, luxury_entry, lent_entry, savings_entry = [entries[cat.lower()] for cat in categories]
 
-lent_label = tk.Label(root, text="Lent:")
-lent_label.grid(row=6, column=0, padx=5, pady=5)
-lent_entry = tk.Entry(root)
-lent_entry.grid(row=6, column=1, padx=5, pady=5)
+tk.Button(frame_left, text="Add Expense", command=add_expense).pack(pady=5)
 
-add_button = tk.Button(root, text="Add Expense", command=add_expense)
-add_button.grid(row=8, column=0, columnspan=2, padx=5, pady=10)
+columns = ("Date", "Name", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings")
+expenses_tree = ttk.Treeview(frame_left, columns=columns, show="headings", height=5)
+for col in columns:
+    expenses_tree.heading(col, text=col)
+    expenses_tree.column(col, width=60)  # Adjusting column width
+expenses_tree.pack()
 
-# Create a treeview to display expenses
-columns = ("Name", "Date", "Rent", "Need", "Transit", "Luxury", "Lent")
-expenses_tree = ttk.Treeview(root, columns=columns, show="headings")
-expenses_tree.heading("Name", text="Name")
-expenses_tree.heading("Date", text="Date")
-expenses_tree.heading("Rent", text="Rent")
-expenses_tree.heading("Need", text="Need")
-expenses_tree.heading("Transit", text="Transit")
-expenses_tree.heading("Luxury", text="Luxury")
-expenses_tree.heading("Lent", text="Lent")
-expenses_tree.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
+status_label = tk.Label(frame_left, text="", fg="green")
+status_label.pack()
 
-# Create a label to display the total expense
-total_label = tk.Label(root, text="")
-total_label.grid(row=10, column=0, columnspan=2, padx=5, pady=5)
+tk.Button(frame_left, text="View Expenses", command=view_expenses).pack(pady=5)
 
-# Create a label to show the status of expense addition and deletion
-status_label = tk.Label(root, text="", fg="green")
-status_label.grid(row=11, column=0, columnspan=2, padx=5, pady=5)
+if not os.path.exists(excel_file):
+    with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+        pd.DataFrame(columns=columns).to_excel(writer, sheet_name=current_month, index=False)
 
-# Create buttons to view and delete expenses
-view_button = tk.Button(root, text="View Expenses", command=view_expenses)
-view_button.grid(row=12, column=0, padx=5, pady=10)
+summary_label = tk.Label(frame_left, text="", justify="left")
+summary_label.pack()
 
-delete_button = tk.Button(root, text="Delete Expense", command=delete_expense)
-delete_button.grid(row=13, column=1, padx=5, pady=10)
+chart_frame = tk.Frame(frame_left)
+chart_frame.pack()
 
-# Check if the 'expenses.txt' file exists; create it if it doesn't
-if not os.path.exists("expenses.txt"):
-    with open("expenses.txt", "w"):
-        pass
-
-# Display existing expenses on application start
 view_expenses()
-
 root.mainloop()
