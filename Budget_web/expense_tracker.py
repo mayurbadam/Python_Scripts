@@ -7,25 +7,12 @@ import matplotlib.pyplot as plt
 from flask import Flask, render_template, request, redirect, url_for
 import base64
 from io import BytesIO
-from openpyxl import load_workbook, Workbook
+from openpyxl import load_workbook
 
 app = Flask(__name__)
 
 # Excel file for local storage
 excel_file = "expenses.xlsx"
-
-def initialize_summary_sheet():
-    if not os.path.exists(excel_file):
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Yearly Summary"
-        ws.append(["Month", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings"])
-        wb.save(excel_file)
-    else:
-        with pd.ExcelWriter(excel_file, engine="openpyxl", mode="a", if_sheet_exists="overlay") as writer:
-            if "Yearly Summary" not in writer.book.sheetnames:
-                df = pd.DataFrame(columns=["Month", "Rent", "Need", "Transit", "Luxury", "Lent", "Savings"])
-                df.to_excel(writer, sheet_name="Yearly Summary", index=False)
 
 def get_month_name(date_str):
     try:
@@ -43,23 +30,6 @@ def load_data(sheet_name):
 def save_data(data, sheet_name):
     with pd.ExcelWriter(excel_file, engine="openpyxl", mode="a", if_sheet_exists="overlay") as writer:
         data.to_excel(writer, sheet_name=sheet_name, index=False)
-
-def update_yearly_summary():
-    summary_data = []
-    with pd.ExcelFile(excel_file, engine="openpyxl") as xls:
-        for sheet in xls.sheet_names:
-            if sheet not in ["Yearly Summary"]:
-                data = pd.read_excel(xls, sheet_name=sheet, engine="openpyxl")
-                if not data.empty:
-                    totals = {col: data[col].astype(float).sum() for col in ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]}
-                    summary_data.append({"Month": sheet, **totals})
-    print(f"Updating yearly summary with data: {summary_data}")
-
-    if summary_data:
-        df_summary = pd.DataFrame(summary_data)
-        print(f"Updating yearly summary with data: {df_summary}")  # Debugging
-        with pd.ExcelWriter(excel_file, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-            df_summary.to_excel(writer, sheet_name="Yearly Summary", index=False)
 
 def generate_chart(data):
     categories = ["Rent", "Need", "Transit", "Luxury", "Lent", "Savings"]
@@ -110,10 +80,8 @@ def add_expense():
     }])
     data = pd.concat([data, new_row], ignore_index=True)
     save_data(data, month_name)
-    update_yearly_summary()
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    initialize_summary_sheet()
     app.run(debug=True)
 
